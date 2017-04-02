@@ -22,8 +22,10 @@ class ClockDivider extends Module {
 
   when(counter === io.pulseEveryNCycles){
     counter := 0.asUInt(16.W);
+    io.outputPulse := 1
   }.otherwise{
     counter := counter + 1.asUInt(16.W);
+    io.outputPulse := 0
   }
 
 }
