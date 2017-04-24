@@ -1,5 +1,5 @@
 // See LICENSE.txt for license details.
-package problems
+package motion
 
 import chisel3._
 // import Counter._
@@ -14,18 +14,19 @@ import chisel3._
 class ClockDivider extends Module {
   val io = IO(new Bundle {
     val pulseEveryNCycles = Input(UInt(16.W))
-    val outputPulse = Output(Bool()) 
+    val outputPulse = Output(Bool())
   })
 
 
-  val counter = Reg(UInt(width=16.W))
+  val counter = Reg(UInt(width=16.W), init=0.U(16.W))
 
-  when(counter === io.pulseEveryNCycles){
+
+  when(counter === (io.pulseEveryNCycles - 1.U(16.W))){
     counter := 0.asUInt(16.W);
-    io.outputPulse := 1
+    io.outputPulse := true.B
   }.otherwise{
     counter := counter + 1.asUInt(16.W);
-    io.outputPulse := 0
+    io.outputPulse := false.B
   }
 
 }

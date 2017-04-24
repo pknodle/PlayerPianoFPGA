@@ -12,9 +12,10 @@ class ClockDividerUnitTester(d: ClockDivider) extends PeekPokeTester(d) {
   poke(d.io.pulseEveryNCycles, pulseDivisor)
 
   for(i <- 0 until 20000){
+
+    println(s"hehehj ${peek(d.io.test_counter)}: ${peek(d.io.outputPulse)}")
+    expect(d.io.outputPulse, i % pulseDivisor  == pulseDivisor - 1)
     step(1)
-    println("hehehj")
-    expect(d.io.outputPulse, (i) % pulseDivisor  == 0)
   }
  
 }
