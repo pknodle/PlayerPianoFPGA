@@ -1,4 +1,4 @@
-name := "chisel-module-template"
+name := "motion-control"
 
 version := "1.0"
 
