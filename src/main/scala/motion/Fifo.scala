@@ -47,8 +47,6 @@ class Fifo extends Module {
   // the gets written to the rest of the FPGA.
   val outputRegister = Reg(UInt(8.W))
 
-  val inputRegisterFree = Reg(Bool())
-  val outputRegisterFree = Reg(Bool())
 
   // There is a somewhat slow state machine that deals with the
   // USB FIFO chip.  Since this is an asynchronous USB FIFO, I can't
@@ -60,6 +58,16 @@ class Fifo extends Module {
   val outputConsumed = Reg(Bool())
   val inputFilled = Reg(Bool())
 
+  // Set high when the output register is free.
+  // Used to generate handshake to the rest of the FPGA.
+  val inputRegisterFree = Reg(Bool())
+  val outputRegisterFree = Reg(Bool())
+
+  // This allows the idle state to swap between checking
+  // to read from the computer and checking to write to the computer.
+  // This ensures input and output are given equal priority and neither one
+  // starves.  
+  val check_read_next = Reg(Bool())
 
 
   io.inputReady := !rfx
@@ -69,6 +77,7 @@ class Fifo extends Module {
     state := sIdle
     inputRegisterFree := true.B
     outputRegisterFree := true.B
+    check_read_next := true.B
   }.otherwise{
 
     // This is the main state machine.
@@ -78,7 +87,6 @@ class Fifo extends Module {
      * Idle {
      * if read -> read_state
      *  else if write -> write_state
-     *  else check_handshake
      * }
      *  
      * read_state -> check if read_register is filled.
@@ -92,22 +100,22 @@ class Fifo extends Module {
      */
 
     when(state === sIdle){
-      when(inputRegisterFree & io.rfx){
-        //Trigger a read.
-        state := readStrobe
-      }.elsewhen(!inputRegisterFree & inputFilled
-    }.elsewhen(state === readStrobe){
-        state := checkWrite
-      }.elsewhen(state === checkWrite){
 
-        when(outputRegisterFree & io.txe){
-        state := writeStrobe
+      when(check_read_next & inputFilled & !io.txe){
+        //Trigger writting a byte to the host computer
+        state := write_to_computer_strobe
+        check_read_next := false.B
+      }.elsewhen(outputRegisterFree & !io.rxf){
+        state := read_from_computer_strobe
+        check_read_next := true.B
       }.otherwise{
+        check_read_next := !check_read_next
         state := sIdle
       }
-    }.elsewhen(state === writeStrobe){
 
+    }.elsewhen(state === readStrobe){
     }
   }
+
 }
 
