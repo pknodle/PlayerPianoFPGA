@@ -103,17 +103,38 @@ class Fifo extends Module {
 
       when(check_read_next & inputFilled & !io.txe){
         //Trigger writting a byte to the host computer
-        state := write_to_computer_strobe
+        state := write_to_computer_start
         check_read_next := false.B
       }.elsewhen(outputRegisterFree & !io.rxf){
-        state := read_from_computer_strobe
+        state := read_from_computer
         check_read_next := true.B
       }.otherwise{
         check_read_next := !check_read_next
         state := sIdle
       }
 
-    }.elsewhen(state === readStrobe){
+    }.elsewhen(state === read_from_computer){
+
+    }.elsewhen(state === write_to_computer_start){
+
+
+      // We are running a 50Mhz clock, which has a 20ns period
+      // Waiting one clock cycle is enough for the setup time.
+      //
+      //
+      state := write_to_computer_wait
+
+      // Drive the output on the I/O line.  This enables a tristate
+      // buffer in connected to the I/O pin on the FPGA.
+      io.enableOutput := 1.B
+
+    }.elsewhen(state === write_to_computer_wait
+      enableOutput := 1.B
+      state := write_to_computer_strobe
+    }.elsewhen(state === write_to_computer_strobe){
+      
+    }.otherwise{
+      state := sIdle
     }
   }
 
