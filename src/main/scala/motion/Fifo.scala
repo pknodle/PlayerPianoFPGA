@@ -36,8 +36,9 @@ class Fifo extends Module {
     val enableOutput = Output(Bool())
   })
 
-  val sIdle :: readLoadData :: readStrobe :: writeLoadData :: writeStrobe
-    :: checkWrite :: Nil = Enum(UInt(), 5)
+  // These are the enumerations for the outer state maching
+  val sIdle :: sReadFromComputer :: sWriteToComputer :: Nil = Enum(UInt(), 3)
+
 
   // The input register is the input to this module and the data which gets
   // written to the computer. 
@@ -83,27 +84,12 @@ class Fifo extends Module {
     // This is the main state machine.
     //
     // Roughly it does this:
-    /*
-     * Idle {
-     * if read -> read_state
-     *  else if write -> write_state
-     * }
-     *  
-     * read_state -> check if read_register is filled.
-     *   if so, write out to the host computer.
-     *   Now flag the input register as free
-     * 
-     * write_state -> check if the consumer can take a byte
-     *   if so, let them have it!
-     *   now flag the output register as free
-     * 
-     */
 
     when(state === sIdle){
 
       when(check_read_next & inputFilled & !io.txe){
         //Trigger writting a byte to the host computer
-        state := write_to_computer_start
+        state := sWriteToComputer
         check_read_next := false.B
       }.elsewhen(outputRegisterFree & !io.rxf){
         state := read_from_computer
@@ -113,30 +99,73 @@ class Fifo extends Module {
         state := sIdle
       }
 
-    }.elsewhen(state === read_from_computer){
+    }.othewise{
+      when(returnMainStateMachineToIdle){
+        state := sIdle
+      }.otherwise{
+        state := state
+      }
+    }
+  }
 
-    }.elsewhen(state === write_to_computer_start){
+  val writeStrobeCounter = Register(UInt(4.W))
+
+
+  when(reset === true.B){
+    enableOutput := 0.B
+  }otherwise{
+    when(writeState === sWriteIdle){
+      enableOutput := 1.B
+      writeStrobeCounter := 4.UInt
+
+      when(state := sWriteToComputer){
+        writeState := sWriteStart
+      }.otherwise{
+        writeState := sWriteIdle
+      }
+
+     }.elsewhen(writeState === sWriteStart){
 
 
       // We are running a 50Mhz clock, which has a 20ns period
       // Waiting one clock cycle is enough for the setup time.
       //
-      //
-      state := write_to_computer_wait
+      // I'm going to wait twice so that I don't have to fuss
+      // with glitches.
+      writeState := sWriteToComputerWait0
 
       // Drive the output on the I/O line.  This enables a tristate
       // buffer in connected to the I/O pin on the FPGA.
       io.enableOutput := 1.B
 
-    }.elsewhen(state === write_to_computer_wait
+      writeStrobeCounter := writeStrobeCounter
+
+    }.elsewhen(writeState === sWriteToComputerWait0){
       enableOutput := 1.B
-      state := write_to_computer_strobe
-    }.elsewhen(state === write_to_computer_strobe){
-      
+      state := sWriteToComputerWait0
+      writeStrobeCounter := writeStrobeCounter
+    }.elsewhen(writeState === sWriteToComputerWait1){
+      enableOutput := 1.B
+      state := sWriteToComputerStrobe
+
+    }.elsewhen(state === sWriteToComputerStrobe){
+      enableOutput := 1.B
+      writeStrobeCounter := writeStrobeCounter - 1
+      when(writeStrobeCounter === 0.UInt){
+        writeState := sWriteIdle
+      }.otherwise{
+        writeState := sWriteToComputerStrobe
+      }
     }.otherwise{
       state := sIdle
     }
   }
-
 }
+
+
+
+
+
+
+
 
