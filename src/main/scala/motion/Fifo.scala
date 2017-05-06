@@ -27,7 +27,7 @@ class Fifo extends Module {
     val dataOut    = Output(UInt(8.W))
 
 
-    val rfx = Input(Bool())
+    val rxf = Input(Bool())
     val read = Output(Bool())
 
     val txe = Input(Bool())
@@ -39,6 +39,12 @@ class Fifo extends Module {
   // These are the enumerations for the outer state maching
   val sIdle :: sReadFromComputer :: sWriteToComputer :: Nil = Enum(UInt(), 3)
 
+  val state = Reg(UInt(3.W))
+
+  val (sWriteIdle :: sWriteStart :: sWriteToComputerWait0 ::
+      sWriteToComputerWait1 :: sWriteToComputerStrobe :: Nil) = Enum(UInt(), 5)
+
+  val writeState = Reg(UInt(3.W))
 
   // The input register is the input to this module and the data which gets
   // written to the computer. 
@@ -70,9 +76,13 @@ class Fifo extends Module {
   // starves.  
   val check_read_next = Reg(Bool())
 
+  // This is the logic which drives the main state machine back to the
+  // idle state.
+  val returnMainStateMachineToIdle = false.B
 
-  io.inputReady := !rfx
-  io.outputReady := !txe
+
+  io.inputReady := !io.rxf
+  io.outputReady := !io.txe
 
   when (reset === true.B){
     state := sIdle
@@ -92,14 +102,13 @@ class Fifo extends Module {
         state := sWriteToComputer
         check_read_next := false.B
       }.elsewhen(outputRegisterFree & !io.rxf){
-        state := read_from_computer
+        state := sReadFromComputer
         check_read_next := true.B
       }.otherwise{
         check_read_next := !check_read_next
         state := sIdle
       }
-
-    }.othewise{
+    }.otherwise {
       when(returnMainStateMachineToIdle){
         state := sIdle
       }.otherwise{
@@ -108,17 +117,17 @@ class Fifo extends Module {
     }
   }
 
-  val writeStrobeCounter = Register(UInt(4.W))
+  val writeStrobeCounter = Reg(UInt(4.W))
 
 
   when(reset === true.B){
-    enableOutput := 0.B
+    io.enableOutput := false.B
   }otherwise{
     when(writeState === sWriteIdle){
-      enableOutput := 1.B
-      writeStrobeCounter := 4.UInt
+      io.enableOutput := true.B
+      writeStrobeCounter := UInt(4)
 
-      when(state := sWriteToComputer){
+      when(state === sWriteToComputer){
         writeState := sWriteStart
       }.otherwise{
         writeState := sWriteIdle
@@ -136,22 +145,22 @@ class Fifo extends Module {
 
       // Drive the output on the I/O line.  This enables a tristate
       // buffer in connected to the I/O pin on the FPGA.
-      io.enableOutput := 1.B
+      io.enableOutput := true.B
 
       writeStrobeCounter := writeStrobeCounter
 
     }.elsewhen(writeState === sWriteToComputerWait0){
-      enableOutput := 1.B
+      io.enableOutput := true.B
       state := sWriteToComputerWait0
       writeStrobeCounter := writeStrobeCounter
     }.elsewhen(writeState === sWriteToComputerWait1){
-      enableOutput := 1.B
+      io.enableOutput := true.B
       state := sWriteToComputerStrobe
 
     }.elsewhen(state === sWriteToComputerStrobe){
-      enableOutput := 1.B
-      writeStrobeCounter := writeStrobeCounter - 1
-      when(writeStrobeCounter === 0.UInt){
+      io.enableOutput := true.B
+      writeStrobeCounter := writeStrobeCounter - UInt(1)
+      when(writeStrobeCounter === UInt(0)){
         writeState := sWriteIdle
       }.otherwise{
         writeState := sWriteToComputerStrobe
