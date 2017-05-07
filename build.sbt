@@ -15,6 +15,8 @@ val defaultVersions = Map(
   "chisel-iotesters" -> "1.1-SNAPSHOT"
   )
 
+scalacOptions in ThisBuild ++= Seq("-feature", "-deprecation")
+
 libraryDependencies ++= (Seq("chisel3","chisel-iotesters").map {
   dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
 

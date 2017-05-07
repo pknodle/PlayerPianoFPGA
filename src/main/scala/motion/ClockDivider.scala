@@ -3,7 +3,7 @@ package motion
 
 import chisel3._
 // import Counter._
-
+import scala.language.reflectiveCalls
 
 // This module outputs a single high going pulse on outputPulse every N
 // clock cycles as governed by the input pulseEveryNCycles
@@ -18,7 +18,7 @@ class ClockDivider extends Module {
   })
 
 
-  val counter = Reg(UInt(width=16.W), init=0.U(16.W))
+  val counter = RegInit(UInt(width=16.W), 0.U(16.W))
 
 
   when(counter === (io.pulseEveryNCycles - 1.U(16.W))){

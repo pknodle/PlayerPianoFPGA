@@ -3,6 +3,7 @@
 package example
 
 import chisel3._
+import scala.language.reflectiveCalls
 
 class GCD extends Module {
   val io = IO(new Bundle {

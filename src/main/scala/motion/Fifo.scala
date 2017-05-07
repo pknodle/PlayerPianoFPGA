@@ -5,6 +5,8 @@ package motion
 import chisel3._
 import chisel3.util.Enum
 
+import scala.language.reflectiveCalls
+
 class Fifo extends Module {
   val io = IO(new Bundle {
 
@@ -37,12 +39,12 @@ class Fifo extends Module {
   })
 
   // These are the enumerations for the outer state maching
-  val sIdle :: sReadFromComputer :: sWriteToComputer :: Nil = Enum(UInt(), 3)
+  val sIdle :: sReadFromComputer :: sWriteToComputer :: Nil = Enum(3)
 
   val state = Reg(UInt(3.W))
 
   val (sWriteIdle :: sWriteStart :: sWriteToComputerWait0 ::
-      sWriteToComputerWait1 :: sWriteToComputerStrobe :: Nil) = Enum(UInt(), 5)
+      sWriteToComputerWait1 :: sWriteToComputerStrobe :: Nil) = Enum(5)
 
   val writeState = Reg(UInt(3.W))
 
@@ -125,7 +127,7 @@ class Fifo extends Module {
   }otherwise{
     when(writeState === sWriteIdle){
       io.enableOutput := true.B
-      writeStrobeCounter := UInt(4)
+      writeStrobeCounter := 4.U
 
       when(state === sWriteToComputer){
         writeState := sWriteStart
@@ -159,8 +161,8 @@ class Fifo extends Module {
 
     }.elsewhen(state === sWriteToComputerStrobe){
       io.enableOutput := true.B
-      writeStrobeCounter := writeStrobeCounter - UInt(1)
-      when(writeStrobeCounter === UInt(0)){
+      writeStrobeCounter := writeStrobeCounter - 1.U
+      when(writeStrobeCounter === 0.U ){
         writeState := sWriteIdle
       }.otherwise{
         writeState := sWriteToComputerStrobe
