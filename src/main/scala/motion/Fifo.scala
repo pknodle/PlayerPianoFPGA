@@ -84,7 +84,7 @@ class Fifo extends Module {
 
 
   io.inputReady := !io.rxf
-  io.outputReady := !io.txe
+  
 
   when (reset === true.B){
     state := sIdle
