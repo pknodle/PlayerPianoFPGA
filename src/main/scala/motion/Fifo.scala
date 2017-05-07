@@ -99,7 +99,7 @@ class Fifo extends Module {
 
     when(state === sIdle){
 
-      when(check_read_next & inputFilled & !io.txe){
+      when(check_read_next && inputFilled && !io.txe){
         //Trigger writting a byte to the host computer
         state := sWriteToComputer
         check_read_next := false.B
@@ -168,13 +168,39 @@ class Fifo extends Module {
         writeState := sWriteToComputerStrobe
       }
     }.otherwise{
-      state := sIdle
+      writeState := sWriteIdle
     }
   }
+
+
+  // This state machine handles the logic for the input handshaking
+  when(reset === true.B){
+    inputFilled := false.B
+  }.otherwise{
+    when(inputFilled === true.B){
+      when(writeState === sWriteToComputerStrobe){
+        inputFilled := true.B
+      }.otherwise{
+        inputFilled := false.B
+      }.otherwise{
+        when(io.fifoRead === true.B){
+          inputFilled := true.B
+        }.otherwise{
+          inputFilled := false.B
+        }
+      }
+
+    }
+  }
+
+  io.inputReady := !inputFilled.val
+
 }
 
 
-
+object FifoMain extends App {
+  chisel3.Driver.execute(args, () => new Fifo)
+}
 
 
 
