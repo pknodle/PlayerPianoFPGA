@@ -182,18 +182,19 @@ class Fifo extends Module {
         inputFilled := true.B
       }.otherwise{
         inputFilled := false.B
-      }.otherwise{
-        when(io.fifoRead === true.B){
-          inputFilled := true.B
-        }.otherwise{
-          inputFilled := false.B
-        }
       }
-
+    }.otherwise{
+      when(io.fifoRead === true.B){
+        inputFilled := true.B
+      }.otherwise{
+        inputFilled := false.B
+      }
     }
-  }
 
-  io.inputReady := !inputFilled.val
+  }
+  
+
+  io.inputReady := !(inputFilled)
 
 }
 
