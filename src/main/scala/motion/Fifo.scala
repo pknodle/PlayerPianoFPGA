@@ -83,7 +83,6 @@ class Fifo extends Module {
   val returnMainStateMachineToIdle = false.B
 
 
-  io.inputReady := !io.rxf
   
 
   when (reset === true.B){
